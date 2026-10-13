@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Malampa Province SitRep</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f3f5f8;--surface:#fff;--surface-2:#f8fafc;--border:#e2e8f0;--text:#0f172a;--muted:#5b6b82;
+  --brand:#0b3d6b;--brand-2:#0b4f8a;--shadow:0 1px 2px rgba(15,23,42,.05),0 2px 6px rgba(15,23,42,.06);
+  --cases:#2563eb;--cases-soft:rgba(37,99,235,.35);--ma:#dc2626;--deaths:#111827;
+  --local:#2563eb;--imported:#f59e0b;--unknown:#94a3b8;--unclass:#cbd5e1;--male:#0ea5e9;--female:#db2777;
+  --up:#b91c1c;--down:#15803d;--flat:#5b6b82;
+  --l0:#16a34a;--l1:#facc15;--l2:#f97316;--l3:#dc2626;
+}
+:root[data-theme="dark"]{
+  --bg:#0a1020;--surface:#111a2e;--surface-2:#0d1526;--border:#23314f;--text:#e6ebf3;--muted:#93a3bb;
+  --brand:#08223f;--brand-2:#0b3d6b;--shadow:none;
+  --cases:#60a5fa;--cases-soft:rgba(96,165,250,.35);--ma:#f87171;--deaths:#e6ebf3;
+  --unknown:#64748b;--unclass:#334155;--up:#f87171;--down:#4ade80;--flat:#93a3bb;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit}
+.topbar{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;padding:14px 20px}
+.topbar-inner{max-width:1440px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between}
+.topbar h1{font-size:20px;line-height:1.2;margin:0;font-weight:700}
+.topbar .sub{opacity:.85;font-size:13px;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:4px 10px;border-radius:999px;font-size:12px;white-space:nowrap}
+.chip b{font-weight:600}
+.alert-chip{font-weight:700;border:0;color:#111;padding:5px 12px}
+.btn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px}
+.btn:hover{background:rgba(255,255,255,.22)}
+main{max-width:1440px;margin:0 auto;padding:16px 20px 40px}
+.banner{border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;display:none}
+.banner.show{display:block}
+.banner.demo{background:#fff7e6;border:1px solid #f5c26b;color:#7a4b00}
+.banner.err{background:#fdecec;border:1px solid #f1a1a1;color:#8a1c1c}
+:root[data-theme="dark"] .banner.demo{background:#2a2110;border-color:#6b5320;color:#f5d48f}
+:root[data-theme="dark"] .banner.err{background:#2c1214;border-color:#6d2a2e;color:#f5b0b0}
+.filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.filters label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;gap:4px;font-weight:600}
+.filters input,.filters select{color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;min-width:150px;font-size:13px;text-transform:none;letter-spacing:0;font-weight:400}
+.filters .check{flex-direction:row;align-items:center;gap:6px;padding-bottom:7px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);font-weight:400}
+.filters .check input{min-width:0}
+.btn-ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px}
+.summary{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--brand-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);font-size:14.5px}
+.summary h2{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.summary p{margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px 10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px;min-height:118px}
+.kpi-label{font-size:12px;color:var(--muted);font-weight:600}
+.kpi-value{font-size:27px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi-sub{font-size:12px;color:var(--muted)}
+.delta{font-weight:700}
+.delta.up{color:var(--up)}.delta.down{color:var(--down)}.delta.flat{color:var(--flat)}
+.spark{width:100%;height:28px;margin-top:auto}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(12,minmax(0,1fr))}
+.card{grid-column:span 12;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.span-7{grid-column:span 7}.span-5{grid-column:span 5}.span-6{grid-column:span 6}
+.card-head{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.card h3{margin:0;font-size:15px}
+.card .note{font-size:12px;color:var(--muted);margin-top:8px}
+.chart-box{position:relative;height:340px}
+.chart-box.sm{height:300px}
+#map{height:300px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted);margin-top:8px;align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+.table-wrap{overflow-x:auto}
+table.data{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.data th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:2px solid var(--border);padding:7px 8px;white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+table.data td{border-bottom:1px solid var(--border);padding:7px 8px;vertical-align:top}
+table.data td.n,table.data th.n{text-align:right}
+table.data tr.sel td{background:rgba(37,99,235,.08)}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.tag.lvl{color:#111}
+.tag.ok{background:rgba(22,163,74,.14);color:var(--down)}
+.tag.no{background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+.qa{color:#b45309;font-size:12px}
+:root[data-theme="dark"] .qa{color:#fbbf24}
+.rs{text-align:center;font-size:11px;font-weight:600;white-space:nowrap}
+.rs-adequate{background:#dcfce7;color:#14532d}.rs-limited{background:#fef3c7;color:#78350f}
+.rs-critical{background:#fed7aa;color:#7c2d12}.rs-stock-out{background:#fecaca;color:#7f1d1d}
+.rs-n-a,.rs-none{color:var(--muted)}
+:root[data-theme="dark"] .rs-adequate{background:#14532d;color:#dcfce7}:root[data-theme="dark"] .rs-limited{background:#713f12;color:#fef3c7}
+:root[data-theme="dark"] .rs-critical{background:#7c2d12;color:#fed7aa}:root[data-theme="dark"] .rs-stock-out{background:#7f1d1d;color:#fecaca}
+.support{border:1px solid #f1a1a1;background:#fff5f5;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+:root[data-theme="dark"] .support{background:#2c1214;border-color:#6d2a2e}
+.support h4{margin:0 0 6px;font-size:13px;color:#b91c1c}
+:root[data-theme="dark"] .support h4{color:#f87171}
+.support ul{margin:0;padding-left:18px}
+.support li{margin:4px 0}
+.ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.op{border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface-2)}
+.op h4{margin:0 0 2px;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.op .meta{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.op dt{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-top:8px}
+.op dd{margin:2px 0 0;white-space:pre-wrap;font-size:13px}
+.empty{color:var(--muted);font-size:13px;padding:24px 0;text-align:center}
+.map-label{background:transparent;border:0;box-shadow:none;font-weight:700;font-size:11px;color:#0f172a;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.map-label:before{display:none}
+footer{max-width:1440px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:12px}
+.print-only{display:none}
+@media (max-width:1050px){.span-7,.span-5,.span-6{grid-column:span 12}}
+@media (max-width:600px){main{padding:12px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kpi{padding:10px;min-height:104px}.kpi-sub{font-size:11px}.topbar{padding:12px}.kpi-value{font-size:23px}.chart-box{height:280px}.filters input,.filters select{min-width:0;width:100%}.filters label{flex:1 1 45%}}
+@media print{
+  :root{--bg:#fff;--shadow:none}
+  body{font-size:12px}
+  .no-print,.filters,.banner{display:none!important}
+  .print-only{display:block}
+  .topbar{background:#0b3d6b!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .card,.kpi,.summary{break-inside:avoid;page-break-inside:avoid}
+  .span-7,.span-5,.span-6{grid-column:span 12}
+  main{max-width:none;padding:8px}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <h1 id="title">Malampa Province SitRep</h1>
+      <div class="sub" id="subtitle">Loading…</div>
+    </div>
+    <div class="chips">
+      <span class="chip alert-chip" id="alertChip" title="Highest current EOC activation level among reporting locations">Activation –</span>
+      <span class="chip alert-chip" id="statusChip" title="Worst overall status among reporting locations">Status –</span>
+      <span class="chip" id="periodChip">Period –</span>
+      <span class="chip" id="updatedChip">Latest submission –</span>
+      <span class="chip no-print" id="refreshChip">Refresh –</span>
+      <button class="btn no-print" id="btnRefresh" type="button">↻ Refresh</button>
+      <button class="btn no-print" id="btnTheme" type="button">◐ Theme</button>
+      <button class="btn no-print" id="btnPrint" type="button">⎙ Print / PDF</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="banner demo" id="demoBanner"><b>Demo data.</b> Synthetic outbreak for illustration only. Set <code>CONFIG.DATA_URL</code> (and <code>DASHBOARD_KEY</code>) in this file to connect your Google Sheet.</div>
+  <div class="banner err" id="errBanner"></div>
+  <div class="print-only" id="printMeta"></div>
+
+  <section class="filters no-print" aria-label="Filters">
+    <label>From<input type="date" id="fFrom"></label>
+    <label>To (as-of date)<input type="date" id="fTo"></label>
+    <label>Area council<select id="fProv"><option value="">All area councils</option></select></label>
+    <label>Organisation<select id="fOrg"><option value="">All organisations</option></select></label>
+    <label>Epi-curve by<select id="fCurve">
+      <option value="notification">Date of report</option>
+      <option value="transmission">Transmission classification</option>
+      <option value="onset">Date of symptom onset</option>
+    </select></label>
+    <label class="check"><input type="checkbox" id="fDeaths" checked> Show deaths</label>
+    <button class="btn-ghost" id="btnReset" type="button">Reset filters</button>
+  </section>
+
+  <section class="summary" aria-live="polite">
+    <h2>Situation at a glance</h2>
+    <p id="summaryText">Loading data…</p>
+  </section>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid">
+    <div class="card">
+      <div class="card-head"><h3 id="epiTitle">Epidemic curve</h3><span class="note" id="epiNote" style="margin:0"></span></div>
+      <div class="chart-box"><canvas id="epiChart" aria-label="Epidemic curve"></canvas></div>
+    </div>
+
+    <div class="card span-5">
+      <div class="card-head"><h3>Confirmed cases by age group and sex</h3><span class="note" id="pyrNote" style="margin:0"></span></div>
+      <div class="chart-box sm"><canvas id="pyrChart" aria-label="Age and sex pyramid"></canvas></div>
+    </div>
+
+    <div class="card span-7">
+      <div class="card-head"><h3>Geographic distribution</h3><span class="note" style="margin:0">Malekula · Ambrym · Paama — circle size = cumulative cases · colour = 7-day incidence per 100 000</span></div>
+      <div id="map"></div>
+      <div class="legend" id="mapLegend"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Cases by area council</h3><span class="note" style="margin:0" id="provNote"></span></div>
+      <div class="table-wrap"><table class="data" id="provTable"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Operational updates</h3><span class="note" style="margin:0">Latest report from each location (last <span class="staleDays"></span> days)</span></div>
+      <div id="supportBox"></div>
+      <div class="ops" id="ops"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Resource status</h3><span class="note" style="margin:0">Latest report from each location</span></div>
+      <div class="table-wrap"><table class="data" id="resTable"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Latest submissions</h3><span class="note" style="margin:0">“Counted” = included in totals (latest report per location and day at the primary level)</span></div>
+      <div class="table-wrap"><table class="data" id="subTable"></table></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div id="footerText"></div>
+  <div>Definitions: CFR = cumulative deaths ÷ cumulative confirmed cases. 7-day incidence = confirmed cases reported in the last 7 days per 100 000 population. Positivity = positive tests ÷ tests performed. Figures are provisional and subject to revision.</div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =====================================================================
+     CONFIGURATION — edit these values
+     ===================================================================== */
+  const CONFIG = {
+    DATA_URL: '',            // Apps Script Web App URL ending in /exec  (blank = demo data)
+    DASHBOARD_KEY: '',       // must match DASHBOARD_KEY in the Config sheet
+    REFRESH_MINUTES: 2,      // auto-refresh interval (1–5 recommended)
+    DEFAULT_WINDOW_DAYS: 60, // days shown on the epi-curve by default
+    STALE_DAYS: 7,           // status figures (active, hospitalised, resources) older than this are ignored
+    SHOW_MAP: true,
+    TILE_URL: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    TILE_ATTRIBUTION: '&copy; OpenStreetMap contributors',
+    LEAFLET_JS: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    LEAFLET_CSS: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  };
+  // Optional URL overrides: ?data=<exec url>&key=<key>&refresh=<min>&demo=1
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('data')) CONFIG.DATA_URL = qs.get('data');
+  if (qs.get('key')) CONFIG.DASHBOARD_KEY = qs.get('key');
+  if (+qs.get('refresh') > 0) CONFIG.REFRESH_MINUTES = Math.max(1, +qs.get('refresh'));
+
+  /* =====================================================================
+     HELPERS
+     ===================================================================== */
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
+  const fmtN = v => v == null || !isFinite(v) ? '–' : Math.round(v).toLocaleString('en-GB');
+  const fmt1 = v => v == null || !isFinite(v) ? '–' : (+v).toLocaleString('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const pad = n => String(n).padStart(2, '0');
+  const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  const fromKey = k => new Date(k + 'T00:00:00Z');
+  const toKey = d => d.toISOString().slice(0, 10);
+  const addDays = (k, n) => toKey(new Date(fromKey(k).getTime() + n * 864e5));
+  const diffDays = (a, b) => Math.round((fromKey(b) - fromKey(a)) / 864e5);
+  const dayRange = (a, b) => { const out = []; for (let k = a; k <= b; k = addDays(k, 1)) out.push(k); return out; };
+  const fmtDay = k => k ? fromKey(k).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '–';
+  const fmtLong = k => k ? fromKey(k).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '–';
+  const fmtTs = iso => { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? String(iso) : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const slug = s => String(s || 'none').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'none';
+  const maxKey = (a, b) => a > b ? a : b;
+  const pctChange = (now, prev) => prev > 0 ? (now - prev) / prev * 100 : (now > 0 ? null : 0);
+  const pl = (n, w) => (Math.round(n) === 1 ? w : w + 's');
+  const sumBy = (arr, f) => arr.reduce((s, x) => s + (f(x) || 0), 0);
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } } };
+
+  /* =====================================================================
+     STATE
+     ===================================================================== */
+  const S = {
+    data: null, demo: !CONFIG.DATA_URL || qs.get('demo') === '1',
+    filters: { from: '', to: '', province: '', org: '', curve: 'notification', deaths: true },
+    charts: {}, map: null, mapLayer: null, leaflet: null,
+    lastFetch: null, nextAt: 0, rendered: false, loading: false
+  };
+
+  /* =====================================================================
+     DATA LOADING
+     ===================================================================== */
+  async function fetchLive() {
+    const u = new URL(CONFIG.DATA_URL);
+    if (CONFIG.DASHBOARD_KEY) u.searchParams.set('key', CONFIG.DASHBOARD_KEY);
+    u.searchParams.set('_', Date.now());
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 25000);
+    try {
+      const res = await fetch(u.toString(), { signal: ctl.signal, cache: 'no-store', redirect: 'follow' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const j = await res.json();
+      if (j.error) throw new Error(j.error);
+      return j;
+    } finally { clearTimeout(timer); }
+  }
+
+  function prepare(j) {
+    const records = (j.rows || []).map(row => {
+      const r = {};
+      j.cols.forEach((c, i) => { r[c] = row[i]; });
+      r.report_date = String(r.report_date || '').slice(0, 10);
+      r.submitted_at = r.submitted_at ? new Date(r.submitted_at).toISOString() : '';
+      r.count_in_totals = r.count_in_totals === true || String(r.count_in_totals).toUpperCase() === 'TRUE';
+      r.province = r.area_council != null ? r.area_council : r.province;   // internal alias: geographic unit = area council
+      return r;
+    }).filter(r => r.report_date);
+    const meta = j.meta || {};
+    meta.national = meta.provinceWide;
+    return { meta, population: j.population || [], records };
+  }
+
+  async function load() {
+    if (S.loading) return;
+    S.loading = true;
+    $('#refreshChip').textContent = 'Refreshing…';
+    try {
+      const raw = S.demo ? makeDemoData() : await fetchLive();
+      S.data = prepare(raw);
+      S.lastFetch = new Date();
+      hideError();
+      populateFilters();
+      render();
+    } catch (err) {
+      console.error(err);
+      showError('Could not refresh data (' + esc(err.message || err) + ').' +
+        (S.lastFetch ? ' Showing data last loaded at ' + S.lastFetch.toLocaleTimeString('en-GB') + '.' : ' Check DATA_URL, DASHBOARD_KEY and that the web app is deployed with access “Anyone”.'));
+    } finally {
+      S.loading = false;
+      S.nextAt = Date.now() + CONFIG.REFRESH_MINUTES * 60000;
+    }
+  }
+  function showError(html) { const b = $('#errBanner'); b.innerHTML = html; b.classList.add('show'); }
+  function hideError() { $('#errBanner').classList.remove('show'); }
+
+  // Auto-refresh with countdown; pauses while the tab is hidden to save quota
+  setInterval(() => {
+    if (document.hidden || S.loading || !S.nextAt) return;
+    const left = Math.max(0, S.nextAt - Date.now());
+    if (left === 0) { load(); return; }
+    const s = Math.ceil(left / 1000);
+    $('#refreshChip').textContent = 'Next refresh ' + Math.floor(s / 60) + ':' + pad(s % 60);
+  }, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.nextAt && Date.now() >= S.nextAt) load(); });
+
+  /* =====================================================================
+     FILTERS
+     ===================================================================== */
+  function populateFilters() {
+    const { records, population, meta } = S.data;
+    const provs = population.map(p => p.name);
+    records.forEach(r => { if (r.province && r.province !== meta.national && !provs.includes(r.province)) provs.push(r.province); });
+    setOptions($('#fProv'), 'All area councils', provs, S.filters.province);
+    const orgs = [...new Set(records.map(r => r.organisation).filter(Boolean))].sort();
+    setOptions($('#fOrg'), 'All organisations', orgs, S.filters.org);
+    const dates = records.map(r => r.report_date).sort();
+    if (dates.length) {
+      ['#fFrom', '#fTo'].forEach(id => { $(id).min = dates[0]; $(id).max = dates[dates.length - 1]; });
+    }
+  }
+  function setOptions(sel, allLabel, values, current) {
+    sel.innerHTML = '<option value="">' + esc(allLabel) + '</option>' +
+      values.map(v => '<option' + (v === current ? ' selected' : '') + '>' + esc(v) + '</option>').join('');
+  }
+  function bindFilters() {
+    const upd = () => {
+      S.filters.from = $('#fFrom').value; S.filters.to = $('#fTo').value;
+      S.filters.province = $('#fProv').value; S.filters.org = $('#fOrg').value;
+      S.filters.curve = $('#fCurve').value; S.filters.deaths = $('#fDeaths').checked;
+      if (S.data) render();
+    };
+    ['#fFrom', '#fTo', '#fProv', '#fOrg', '#fCurve', '#fDeaths'].forEach(id => $(id).addEventListener('change', upd));
+    $('#btnReset').addEventListener('click', () => {
+      $('#fFrom').value = ''; $('#fTo').value = ''; $('#fProv').value = ''; $('#fOrg').value = '';
+      $('#fCurve').value = 'notification'; $('#fDeaths').checked = true; upd();
+    });
+    $('#btnRefresh').addEventListener('click', () => load());
+    $('#btnPrint').addEventListener('click', () => window.print());
+    $('#btnTheme').addEventListener('click', () => {
+      const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = t; store.set('sitrep-theme', t);
+      if (S.data) render();
+    });
+  }
+
+  /* =====================================================================
+     ANALYTICS
+     ===================================================================== */
+  // Latest reported value of `field` per location (primary level, falling back to the province-wide report), summed.
+  function snapshot(rows, to, field, staleDays, primary) {
+    let pool = rows.filter(r => r.report_date <= to && r.geo_level === primary);
+    if (!pool.length) pool = rows.filter(r => r.report_date <= to && r.geo_level === 'Province');
+    const latest = new Map();
+    for (const r of pool) {
+      if (num(r[field]) == null) continue;
+      const cur = latest.get(r.location_key);
+      if (!cur || r.report_date > cur.report_date || (r.report_date === cur.report_date && r.submitted_at > cur.submitted_at)) latest.set(r.location_key, r);
+    }
+    let total = null;
+    for (const r of latest.values()) {
+      if (staleDays && diffDays(r.report_date, to) > staleDays) continue;
+      total = (total || 0) + num(r[field]);
+    }
+    return total;
+  }
+  function latestPerLocation(rows, to, staleDays) {
+    const m = new Map();
+    for (const r of rows) {
+      if (r.report_date > to || (staleDays && diffDays(r.report_date, to) > staleDays)) continue;
+      const cur = m.get(r.location_key);
+      if (!cur || r.report_date > cur.report_date || (r.report_date === cur.report_date && r.submitted_at > cur.submitted_at)) m.set(r.location_key, r);
+    }
+    return [...m.values()];
+  }
+  function movingAvg(arr, w) { return arr.map((_, i) => i < w - 1 ? null : arr.slice(i - w + 1, i + 1).reduce((a, b) => a + b, 0) / w); }
+
+  function compute() {
+    const { records, population, meta } = S.data;
+    const f = S.filters, primary = meta.primaryLevel || 'Facility';
+    const alertLevels = meta.alertLevels || [];
+    const orgOk = r => !f.org || r.organisation === f.org;
+    const recsOrg = records.filter(orgOk);
+    const recs = recsOrg.filter(r => !f.province || r.province === f.province);
+    const counted = recs.filter(r => r.count_in_totals);
+
+    const dates = counted.map(r => r.report_date).sort();
+    const minD = dates[0] || todayKey(), maxD = dates[dates.length - 1] || todayKey();
+    const to = f.to || maxD;
+    const from = f.from || maxKey(minD, addDays(to, -(CONFIG.DEFAULT_WINDOW_DAYS - 1)));
+
+    // Daily aggregation of counted reports
+    const day = {};
+    const blank = () => ({ n: 0, dth: 0, t: 0, p: 0, loc: 0, imp: 0, unk: 0, unclass: 0 });
+    for (const r of counted) {
+      const d = day[r.report_date] || (day[r.report_date] = blank());
+      const n = num(r.new_confirmed) || 0;
+      d.n += n; d.dth += num(r.new_deaths) || 0;
+      if (num(r.tests_today) != null && num(r.positives_today) != null) { d.t += num(r.tests_today); d.p += num(r.positives_today); }
+      const l = num(r.trans_local) || 0, im = num(r.trans_imported) || 0, u = num(r.trans_unknown) || 0;
+      d.loc += l; d.imp += im; d.unk += u; d.unclass += Math.max(0, n - l - im - u);
+    }
+    const get = (k, fld) => day[k] ? day[k][fld] : 0;
+    const ext = dayRange(addDays(from, -13), to);
+    const labels = ext.slice(13);
+    const seriesOf = fld => labels.map(k => get(k, fld));
+    const ma = movingAvg(ext.map(k => get(k, 'n')), 7).slice(13);
+    const maD = movingAvg(ext.map(k => get(k, 'dth')), 7).slice(13);
+
+    // Onset curve
+    const onset = {};
+    for (const r of counted) {
+      if (!r.onset_json || r.report_date > to) continue;
+      let o; try { o = typeof r.onset_json === 'string' ? JSON.parse(r.onset_json) : r.onset_json; } catch (e) { continue; }
+      for (const k in o) onset[k] = (onset[k] || 0) + (+o[k] || 0);
+    }
+
+    // Headline metrics as of `to`
+    const sumRange = (fld, a, b) => dayRange(a, b).reduce((s, k) => s + get(k, fld), 0);
+    const newToday = get(to, 'n'), newPrev = get(addDays(to, -1), 'n');
+    const dthToday = get(to, 'dth'), dthPrev = get(addDays(to, -1), 'dth');
+    const wk = sumRange('n', addDays(to, -6), to), wkPrev = sumRange('n', addDays(to, -13), addDays(to, -7));
+    const upto = counted.filter(r => r.report_date <= to);
+    const cumCases = snapshot(upto, to, 'cum_confirmed', 0, primary) ?? sumBy(upto, r => num(r.new_confirmed));
+    const cumDeaths = snapshot(upto, to, 'cum_deaths', 0, primary) ?? sumBy(upto, r => num(r.new_deaths));
+    const popOf = name => (population.find(p => p.name === name) || {}).pop || 0;
+    const pop = f.province ? popOf(f.province) : sumBy(population, p => p.pop);
+    const t7 = sumRange('t', addDays(to, -6), to), p7 = sumRange('p', addDays(to, -6), to);
+    const tToday = get(to, 't'), pToday = get(to, 'p');
+
+    // Vaccination coverage: population-weighted from latest provincial reports
+    const vaccLatest = latestPerLocation(counted.filter(r => num(r.vacc_coverage_pct) != null), to, 0);
+    let cov = null;
+    if (vaccLatest.length) {
+      const w = vaccLatest.map(r => ({ c: num(r.vacc_coverage_pct), w: popOf(r.province) || 1 }));
+      cov = sumBy(w, x => x.c * x.w) / sumBy(w, x => x.w);
+    }
+
+    // Reporting completeness at primary level
+    const reported = new Set(counted.filter(r => r.report_date === to && r.geo_level === primary).map(r => r.location_key)).size;
+    let expected = null, unit = 'locations';
+    if (primary === 'Area Council') { expected = f.province ? 1 : population.length; unit = expected > 1 ? 'area councils' : 'area council'; }
+    else if (primary === 'Facility') {   // facilities that reported at least once in the last 14 days
+      expected = new Set(recs.filter(r => r.geo_level === 'Facility' && r.report_date <= to && diffDays(r.report_date, to) <= 14).map(r => r.location_key)).size || null;
+      unit = expected > 1 ? 'facilities' : 'facility';
+    }
+
+    // Highest current activation level / worst status among locations reporting in the last STALE_DAYS
+    let alertIdx = -1, alertWhere = '', statusIdx = -1, statusWhere = '';
+    const statuses = meta.statuses || [];
+    for (const r of latestPerLocation(recs, to, CONFIG.STALE_DAYS)) {
+      const i = alertLevels.indexOf(r.alert_level);
+      if (i > alertIdx) { alertIdx = i; alertWhere = locName(r); }
+      const j = statuses.indexOf(r.overall_status);
+      if (j > statusIdx) { statusIdx = j; statusWhere = locName(r); }
+    }
+
+    // Age / sex in window
+    const age = {}; let sexUnknown = 0;
+    for (const r of counted) {
+      if (r.report_date < from || r.report_date > to) continue;
+      (meta.ageBands || []).forEach(b => ['m', 'f'].forEach(s => { const k = b.key + '_' + s; age[k] = (age[k] || 0) + (num(r['age_' + k]) || 0); }));
+      sexUnknown += num(r.sex_unknown) || 0;
+    }
+
+    // Area-council table (org filter only, so every area council stays visible)
+    const countedOrg = recsOrg.filter(r => r.count_in_totals);
+    const provNames = population.map(p => p.name);
+    countedOrg.forEach(r => { if (r.province && r.province !== meta.national && !provNames.includes(r.province)) provNames.push(r.province); });
+    const provs = provNames.map(name => {
+      const rows = countedOrg.filter(r => r.province === name && r.report_date <= to);
+      const inWin = (a, b) => sumBy(rows.filter(r => r.report_date >= a && r.report_date <= b), r => num(r.new_confirmed));
+      const p = popOf(name);
+      const all = recsOrg.filter(r => r.province === name && r.report_date <= to);
+      const last = all.reduce((m, r) => r.report_date > m ? r.report_date : m, '');
+      const lp = latestPerLocation(all, to, CONFIG.STALE_DAYS);
+      const lvl = lp.reduce((m, r) => Math.max(m, alertLevels.indexOf(r.alert_level)), -1);
+      const wk7 = inWin(addDays(to, -6), to);
+      const pinfo = population.find(x => x.name === name) || {};
+      return {
+        name, pop: p, lat: pinfo.lat, lng: pinfo.lng, newTo: inWin(to, to), wk7,
+        inc7: p ? wk7 / p * 1e5 : null,
+        cum: snapshot(rows, to, 'cum_confirmed', 0, primary) ?? sumBy(rows, r => num(r.new_confirmed)),
+        deaths: snapshot(rows, to, 'cum_deaths', 0, primary) ?? sumBy(rows, r => num(r.new_deaths)),
+        last, lvl, reportedToday: rows.some(r => r.report_date === to)
+      };
+    }).sort((a, b) => (b.wk7 - a.wk7) || (b.cum - a.cum));
+
+    return {
+      meta, primary, from, to, labels, alertLevels,
+      series: { n: seriesOf('n'), dth: seriesOf('dth'), loc: seriesOf('loc'), imp: seriesOf('imp'), unk: seriesOf('unk'), unclass: seriesOf('unclass'), ma, maD, onset: labels.map(k => onset[k] || 0), t: seriesOf('t'), p: seriesOf('p') },
+      k: {
+        newToday, newPrev, dthToday, dthPrev, wk, wkPrev, cumCases, cumDeaths,
+        cfr: cumCases ? cumDeaths / cumCases * 100 : null,
+        active: snapshot(upto, to, 'active', CONFIG.STALE_DAYS, primary),
+        recovered: snapshot(upto, to, 'recovered_cum', 0, primary),
+        hosp: snapshot(upto, to, 'hosp_total', CONFIG.STALE_DAYS, primary),
+        icu: snapshot(upto, to, 'hosp_icu', CONFIG.STALE_DAYS, primary),
+        tToday, posToday: tToday ? pToday / tToday * 100 : null, t7, pos7: t7 ? p7 / t7 * 100 : null,
+        inc7: pop ? wk / pop * 1e5 : null, pop,
+        doses: snapshot(upto, to, 'vacc_doses_cum', 0, primary), cov,
+        reported, expected, unit, alertIdx, alertWhere, statusIdx, statusWhere,
+        lastSubmission: records.reduce((m, r) => r.submitted_at > m ? r.submitted_at : m, '')
+      },
+      age, sexUnknown, provs, recs, counted
+    };
+  }
+  function locName(r) {
+    const parts = [r.province === S.data.meta.national ? 'Malampa (province-wide)' : r.province];
+    if (r.facility) parts.push(r.facility);
+    return parts.filter(Boolean).join(' › ');
+  }
+
+  /* =====================================================================
+     RENDERING
+     ===================================================================== */
+  function render() {
+    const M = compute();
+    if (window.Chart) {
+      Chart.defaults.color = css('--muted');
+      Chart.defaults.borderColor = css('--border');
+      Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    }
+    renderHeader(M); renderSummary(M); renderKPIs(M);
+    renderEpi(M); renderPyramid(M); renderMap(M); renderProvTable(M);
+    renderOps(M); renderResources(M); renderSubmissions(M);
+    S.rendered = true;
+  }
+  // Colour a level by its position on its scale: 3-step scales (L1–L3, Green/Amber/Red) → green, amber, red
+  const scaleColor = (i, n) => { const k = n <= 3 ? ['--l0', '--l2', '--l3'] : ['--l0', '--l1', '--l2', '--l3']; return i >= 0 && k[i] ? css(k[i]) : '#cbd5e1'; };
+  const lvlColor = i => scaleColor(i, ((S.data && S.data.meta.alertLevels) || []).length);
+  const statusColor = i => scaleColor(i, ((S.data && S.data.meta.statuses) || []).length);
+  const lvlTag = (M, i) => i < 0 ? '<span class="tag no">–</span>' :
+    '<span class="tag lvl" style="background:' + lvlColor(i) + '">' + esc((M.alertLevels[i] || '').replace(/\s*–.*/, '') || 'L' + (i + 1)) + '</span>';
+
+  function renderHeader(M) {
+    const m = M.meta, k = M.k;
+    $('#title').textContent = m.title || 'Malampa Province SitRep';
+    document.title = (m.title || 'Malampa Province SitRep') + (S.demo ? ' (demo)' : '');
+    $('#subtitle').textContent = [m.event, (m.province || 'Malampa') + ' Province, ' + (m.country || 'Vanuatu'),
+      S.filters.province ? 'Area council: ' + S.filters.province : 'All area councils'].filter(Boolean).join(' · ');
+    const ac = $('#alertChip');
+    ac.textContent = k.alertIdx >= 0 ? 'Activation ' + M.alertLevels[k.alertIdx] : 'Activation –';
+    ac.style.background = k.alertIdx >= 0 ? lvlColor(k.alertIdx) : 'rgba(255,255,255,.7)';
+    ac.title = k.alertIdx >= 0 ? 'Highest current activation level: ' + k.alertWhere : '';
+    const sc = $('#statusChip'), st = m.statuses || [];
+    sc.textContent = k.statusIdx >= 0 ? 'Status ' + st[k.statusIdx] : 'Status –';
+    sc.style.background = k.statusIdx >= 0 ? statusColor(k.statusIdx) : 'rgba(255,255,255,.7)';
+    sc.style.color = k.statusIdx === 2 ? '#fff' : '#111';
+    sc.title = k.statusIdx >= 0 ? 'Worst overall status: ' + k.statusWhere : '';
+    $('#periodChip').innerHTML = 'Period <b>' + esc(fmtDay(M.from)) + ' – ' + esc(fmtDay(M.to)) + '</b>';
+    $('#updatedChip').innerHTML = 'Latest submission <b>' + esc(fmtTs(k.lastSubmission)) + '</b>';
+    $('#demoBanner').classList.toggle('show', S.demo);
+    $('#printMeta').textContent = 'Printed ' + new Date().toLocaleString('en-GB') + ' · Period ' + fmtDay(M.from) + ' – ' + fmtDay(M.to) +
+      (S.filters.province ? ' · ' + S.filters.province : '') + (S.filters.org ? ' · ' + S.filters.org : '');
+    $('#footerText').textContent = 'Data feed generated ' + fmtTs(m.generated) + ' · ' + (m.recordCount ?? S.data.records.length) +
+      ' submissions · Malampa Province only · Totals use ' + M.primary.toLowerCase() + '-level reports' + (S.demo ? ' · DEMO DATA' : '');
+    document.querySelectorAll('.staleDays').forEach(e => { e.textContent = CONFIG.STALE_DAYS; });
+  }
+
+  function deltaHTML(now, prev, label, goodWhenDown = true) {
+    const p = pctChange(now, prev);
+    if (p == null) return '<span class="delta up">new</span> ' + esc(label);
+    const dir = Math.abs(p) < 0.5 ? 'flat' : (p > 0 ? (goodWhenDown ? 'up' : 'down') : (goodWhenDown ? 'down' : 'up'));
+    const arrow = Math.abs(p) < 0.5 ? '■' : (p > 0 ? '▲' : '▼');
+    return '<span class="delta ' + dir + '">' + arrow + ' ' + Math.abs(p).toFixed(0) + '%</span> ' + esc(label);
+  }
+
+  function renderSummary(M) {
+    const k = M.k, where = S.filters.province ? ' in ' + esc(S.filters.province) + ' area council' : ' in ' + esc(M.meta.province || 'Malampa') + ' Province';
+    const d = pctChange(k.newToday, k.newPrev), wd = pctChange(k.wk, k.wkPrev);
+    const trend = wd == null ? 'new activity' : Math.abs(wd) < 5 ? 'stable' : wd > 0 ? 'an increase of ' + wd.toFixed(0) + '%' : 'a decrease of ' + Math.abs(wd).toFixed(0) + '%';
+    let s = 'As of <b>' + esc(fmtLong(M.to)) + '</b>, a cumulative total of <b>' + fmtN(k.cumCases) + '</b> confirmed ' + pl(k.cumCases, 'case') + ' and <b>' +
+      fmtN(k.cumDeaths) + '</b> ' + pl(k.cumDeaths, 'death') + ' (CFR ' + fmt1(k.cfr) + '%) have been reported' + where + '. ';
+    s += 'On the latest reporting day, <b>' + fmtN(k.newToday) + '</b> new confirmed ' + pl(k.newToday, 'case') +
+      (d == null ? '' : ' (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% vs the previous day)') + ' and <b>' + fmtN(k.dthToday) + '</b> new ' + pl(k.dthToday, 'death') + ' were reported. ';
+    s += 'In the past 7 days, ' + fmtN(k.wk) + ' cases were reported — ' + trend + ' on the previous 7 days — a 7-day incidence of ' + fmt1(k.inc7) + ' per 100 000. ';
+    if (k.pos7 != null) s += '7-day test positivity is ' + fmt1(k.pos7) + '%. ';
+    if (k.hosp != null) s += fmtN(k.hosp) + ' patients are currently hospitalised' + (k.icu != null ? ' (' + fmtN(k.icu) + ' in ICU / critical care)' : '') + '. ';
+    if (k.expected) s += '<b>' + k.reported + ' of ' + k.expected + '</b> ' + k.unit + ' reported for this date.';
+    $('#summaryText').innerHTML = s;
+  }
+
+  function renderKPIs(M) {
+    const k = M.k, last = arr => arr.slice(-14);
+    const posDaily = M.series.t.map((t, i) => t ? M.series.p[i] / t * 100 : null);
+    const cards = [
+      { label: 'New confirmed cases', value: fmtN(k.newToday), sub: deltaHTML(k.newToday, k.newPrev, 'vs previous day'), spark: last(M.series.n), color: '--cases' },
+      { label: 'Cases – last 7 days', value: fmtN(k.wk), sub: deltaHTML(k.wk, k.wkPrev, 'vs prior 7 days'), spark: last(M.series.ma), color: '--ma' },
+      { label: 'Cumulative confirmed', value: fmtN(k.cumCases), sub: fmt1(k.cumCases && k.pop ? k.cumCases / k.pop * 1e5 : null) + ' per 100 000', spark: null },
+      { label: 'New deaths', value: fmtN(k.dthToday), sub: deltaHTML(k.dthToday, k.dthPrev, 'vs previous day'), spark: last(M.series.dth), color: '--deaths' },
+      { label: 'Cumulative deaths', value: fmtN(k.cumDeaths), sub: 'Case-fatality ratio <b>' + fmt1(k.cfr) + '%</b>', spark: null },
+      { label: 'Active cases', value: fmtN(k.active), sub: 'Recovered / discharged: ' + fmtN(k.recovered), spark: null },
+      { label: 'Hospitalised', value: fmtN(k.hosp), sub: 'ICU / critical: <b>' + fmtN(k.icu) + '</b>', spark: null },
+      { label: 'Tests (latest day)', value: fmtN(k.tToday), sub: 'Positivity ' + fmt1(k.posToday) + '% · 7-day ' + fmt1(k.pos7) + '%', spark: last(posDaily), color: '--imported' },
+      { label: '7-day incidence /100k', value: fmt1(k.inc7), sub: 'Population ' + fmtN(k.pop), spark: null },
+      { label: 'Reporting completeness', value: k.expected ? k.reported + ' / ' + k.expected : fmtN(k.reported), sub: esc(k.unit || 'Reports') + ' reporting for ' + esc(fmtDay(M.to)), spark: null },
+    ];
+    if (k.doses != null || k.cov != null) cards.push({ label: 'Vaccine doses (cumulative)', value: fmtN(k.doses), sub: 'Coverage ' + fmt1(k.cov) + '% (pop-weighted)', spark: null });
+    $('#kpis').innerHTML = cards.map((c, i) => '<div class="kpi"><div class="kpi-label">' + esc(c.label) + '</div><div class="kpi-value">' + c.value +
+      '</div><div class="kpi-sub">' + c.sub + '</div>' + (c.spark ? '<canvas class="spark" data-i="' + i + '"></canvas>' : '') + '</div>').join('');
+    document.querySelectorAll('#kpis canvas.spark').forEach(cv => { const c = cards[+cv.dataset.i]; drawSpark(cv, c.spark, css(c.color)); });
+  }
+
+  function drawSpark(cv, data, color) {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 160, h = cv.clientHeight || 28;
+    cv.width = w * dpr; cv.height = h * dpr;
+    const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+    const vals = data.map(v => v == null ? null : +v), clean = vals.filter(v => v != null);
+    if (clean.length < 2) return;
+    const max = Math.max(...clean), min = Math.min(0, ...clean), span = (max - min) || 1;
+    const x = i => 2 + i * (w - 4) / (vals.length - 1), y = v => h - 3 - (v - min) / span * (h - 6);
+    ctx.beginPath(); let started = false;
+    vals.forEach((v, i) => { if (v == null) return; if (!started) { ctx.moveTo(x(i), y(v)); started = true; } else ctx.lineTo(x(i), y(v)); });
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.lineTo(x(vals.length - 1), h); ctx.lineTo(x(0), h); ctx.closePath();
+    ctx.globalAlpha = .12; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
+    const li = vals.length - 1;
+    if (vals[li] != null) { ctx.beginPath(); ctx.arc(x(li), y(vals[li]), 2.4, 0, 7); ctx.fillStyle = color; ctx.fill(); }
+  }
+
+  function newChart(id, cfg) {
+    if (S.charts[id]) S.charts[id].destroy();
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!window.Chart) {
+      if (!el.parentElement.querySelector('.nolib')) el.insertAdjacentHTML('afterend', '<div class="empty nolib" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">Chart library failed to load — check the internet connection.</div>');
+      return;
+    }
+    const msg = el.parentElement.querySelector('.empty.nolib'); if (msg) msg.remove();
+    cfg.options = cfg.options || {};
+    cfg.options.animation = S.rendered ? false : { duration: 500 };
+    cfg.options.responsive = true; cfg.options.maintainAspectRatio = false;
+    S.charts[id] = new Chart(el, cfg);
+  }
+
+  function renderEpi(M) {
+    const mode = S.filters.curve, s = M.series;
+    const bar = (label, data, color) => ({ type: 'bar', label, data, backgroundColor: color, stack: 'c', yAxisID: 'y', order: 2, categoryPercentage: .92, barPercentage: 1 });
+    const ds = [];
+    if (mode === 'transmission') {
+      ds.push(bar('Local', s.loc, css('--local')), bar('Imported', s.imp, css('--imported')),
+        bar('Under investigation', s.unk, css('--unknown')), bar('Not classified', s.unclass, css('--unclass')));
+    } else if (mode === 'onset') {
+      ds.push(Object.assign(bar('Cases by onset date', s.onset, css('--cases')), {
+        backgroundColor: M.labels.map(k => diffDays(k, M.to) < 7 ? css('--cases-soft') : css('--cases'))
+      }));
+    } else ds.push(bar('New confirmed cases', s.n, css('--cases')));
+    if (mode !== 'onset') ds.push({ type: 'line', label: '7-day moving average', data: s.ma.map(v => v == null ? null : +v.toFixed(1)), borderColor: css('--ma'), backgroundColor: css('--ma'), borderWidth: 2.5, pointRadius: 0, tension: .35, stack: 'ma', yAxisID: 'y', order: 0 });
+    const showD = S.filters.deaths && mode !== 'onset';
+    if (showD) ds.push({ type: 'line', label: 'Deaths (right axis)', data: s.dth, borderColor: css('--deaths'), backgroundColor: css('--deaths'), showLine: false, pointStyle: 'rectRot', pointRadius: c => (c.raw > 0 ? 5 : 0), pointHoverRadius: c => (c.raw > 0 ? 7 : 0), stack: 'd', yAxisID: 'y1', order: 0 });
+    $('#epiTitle').textContent = mode === 'onset' ? 'Epidemic curve — confirmed cases by date of symptom onset'
+      : mode === 'transmission' ? 'Epidemic curve — new confirmed cases by transmission classification' : 'Epidemic curve — new confirmed cases by date of report';
+    $('#epiNote').textContent = mode === 'onset' ? 'Lighter bars: last 7 days — incomplete due to reporting delay'
+      : 'Bars: daily cases · red line: 7-day moving average';
+    newChart('epiChart', {
+      type: 'bar', data: { labels: M.labels.map(fmtDay), datasets: ds },
+      options: {
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: false } } },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Cases' }, ticks: { precision: 0 } },
+          y1: { display: showD, position: 'right', beginAtZero: true, suggestedMax: Math.max(3, Math.ceil(Math.max(0, ...s.dth) * 1.3) + 1), grid: { drawOnChartArea: false }, title: { display: true, text: 'Deaths' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  function renderPyramid(M) {
+    const bands = (M.meta.ageBands || []).slice().reverse();
+    const male = bands.map(b => -(M.age[b.key + '_m'] || 0)), female = bands.map(b => M.age[b.key + '_f'] || 0);
+    const total = sumBy(male, v => -v) + sumBy(female, v => v);
+    $('#pyrNote').textContent = total ? fmtN(total) + ' cases with age/sex · ' + fmtN(M.sexUnknown) + ' not recorded' : '';
+    if (!total) {
+      if (S.charts.pyrChart) { S.charts.pyrChart.destroy(); delete S.charts.pyrChart; }
+      const box = $('#pyrChart').parentElement;
+      box.querySelector('.empty') || box.insertAdjacentHTML('beforeend', '<div class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">No age/sex breakdown reported for this period</div>');
+      return;
+    }
+    const e = $('#pyrChart').parentElement.querySelector('.empty'); if (e) e.remove();
+    newChart('pyrChart', {
+      type: 'bar',
+      data: { labels: bands.map(b => b.label), datasets: [
+        { label: 'Male', data: male, backgroundColor: css('--male'), stack: 's', categoryPercentage: .9, barPercentage: .95 },
+        { label: 'Female', data: female, backgroundColor: css('--female'), stack: 's', categoryPercentage: .9, barPercentage: .95 }] },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + Math.abs(c.raw) } } },
+        scales: { x: { stacked: true, ticks: { callback: v => Math.abs(v), precision: 0 } }, y: { stacked: true, grid: { display: false }, title: { display: true, text: 'Age (years)' } } }
+      }
+    });
+  }
+
+  // 7-day incidence colour bins (per 100 000)
+  const INC_BINS = [[0, '#e2e8f0', '0'], [0.0001, '#fde68a', '<10'], [10, '#fbbf24', '10–49'], [50, '#f97316', '50–99'], [100, '#dc2626', '100–199'], [200, '#7f1d1d', '≥200']];
+  const incColor = v => { let c = INC_BINS[0][1]; for (const b of INC_BINS) if ((v || 0) >= b[0]) c = b[1]; return c; };
+
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve();
+    if (S.leaflet) return S.leaflet;
+    S.leaflet = new Promise((res, rej) => {
+      const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = CONFIG.LEAFLET_CSS; document.head.appendChild(l);
+      const s = document.createElement('script'); s.src = CONFIG.LEAFLET_JS; s.onload = res; s.onerror = () => rej(new Error('Leaflet failed to load'));
+      document.head.appendChild(s);
+    });
+    return S.leaflet;
+  }
+
+  async function renderMap(M) {
+    $('#mapLegend').innerHTML = '<span>7-day incidence /100k:</span>' + INC_BINS.map(b => '<span><i style="background:' + b[1] + '"></i>' + b[2] + '</span>').join('');
+    const pts = M.provs.filter(p => p.lat != null && p.lng != null);
+    const box = $('#map');
+    if (!CONFIG.SHOW_MAP || !pts.length) { box.innerHTML = '<div class="empty">Map disabled or no coordinates in the Population sheet.</div>'; return; }
+    try { await loadLeaflet(); } catch (e) { box.innerHTML = '<div class="empty">Map library could not be loaded (offline?). See the area-council table below.</div>'; return; }
+    if (!S.map) {
+      S.map = L.map(box, { scrollWheelZoom: false, attributionControl: true });
+      L.tileLayer(CONFIG.TILE_URL, { maxZoom: 12, attribution: CONFIG.TILE_ATTRIBUTION }).addTo(S.map);
+      S.mapLayer = L.layerGroup().addTo(S.map);
+      S.map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])).pad(0.25));
+    }
+    S.mapLayer.clearLayers();
+    const max = Math.max(1, ...pts.map(p => p.cum || 0));
+    pts.forEach(p => {
+      const sel = S.filters.province === p.name;
+      L.circleMarker([p.lat, p.lng], {
+        radius: 7 + 26 * Math.sqrt((p.cum || 0) / max), fillColor: incColor(p.inc7), fillOpacity: .85,
+        color: sel ? '#111' : '#fff', weight: sel ? 3 : 1.5
+      }).bindTooltip(esc(p.name), { permanent: true, direction: 'right', className: 'map-label', offset: [8, 0] })
+        .bindPopup('<b>' + esc(p.name) + '</b><br>Cumulative: ' + fmtN(p.cum) + '<br>Last 7 days: ' + fmtN(p.wk7) +
+          '<br>7-day incidence: ' + fmt1(p.inc7) + ' /100k<br>Deaths: ' + fmtN(p.deaths) + '<br>Last report: ' + esc(fmtDay(p.last)))
+        .on('click', () => { $('#fProv').value = sel ? '' : p.name; $('#fProv').dispatchEvent(new Event('change')); })
+        .addTo(S.mapLayer);
+    });
+    setTimeout(() => S.map.invalidateSize(), 50);
+  }
+
+  function renderProvTable(M) {
+    $('#provNote').textContent = 'As of ' + fmtDay(M.to) + ' · 2020 Census populations · sorted by cases in the last 7 days · click a row to filter';
+    const totals = M.provs.reduce((t, p) => { t.newTo += p.newTo; t.wk7 += p.wk7; t.cum += p.cum || 0; t.deaths += p.deaths || 0; t.pop += p.pop || 0; return t; }, { newTo: 0, wk7: 0, cum: 0, deaths: 0, pop: 0 });
+    const rows = M.provs.map(p => '<tr data-p="' + esc(p.name) + '" style="cursor:pointer"' + (S.filters.province === p.name ? ' class="sel"' : '') + '><td><b>' + esc(p.name) + '</b></td>' +
+      '<td class="n">' + fmtN(p.pop) + '</td><td class="n">' + fmtN(p.newTo) + (p.reportedToday ? '' : ' <span class="qa" title="No report for this date">⚠</span>') + '</td><td class="n">' + fmtN(p.wk7) + '</td>' +
+      '<td class="n"><span class="tag" style="background:' + incColor(p.inc7) + ';color:' + ((p.inc7 || 0) >= 50 ? '#fff' : '#111') + '">' + fmt1(p.inc7) + '</span></td>' +
+      '<td class="n">' + fmtN(p.cum) + '</td><td class="n">' + fmtN(p.deaths) + '</td><td class="n">' + fmt1(p.cum ? p.deaths / p.cum * 100 : null) + '%</td>' +
+      '<td>' + esc(fmtDay(p.last)) + '</td><td>' + lvlTag(M, p.lvl) + '</td></tr>').join('');
+    $('#provTable').innerHTML = '<thead><tr><th>Area council</th><th class="n">Population</th><th class="n">New (' + esc(fmtDay(M.to)) + ')</th><th class="n">Last 7 days</th><th class="n">7-day /100k</th><th class="n">Cumulative</th><th class="n">Deaths</th><th class="n">CFR</th><th>Last report</th><th>Activation</th></tr></thead><tbody>' +
+      rows + '</tbody><tfoot><tr><td><b>Malampa total</b></td><td class="n"><b>' + fmtN(totals.pop) + '</b></td><td class="n"><b>' + fmtN(totals.newTo) + '</b></td><td class="n"><b>' + fmtN(totals.wk7) +
+      '</b></td><td class="n"><b>' + fmt1(totals.pop ? totals.wk7 / totals.pop * 1e5 : null) + '</b></td><td class="n"><b>' + fmtN(totals.cum) + '</b></td><td class="n"><b>' + fmtN(totals.deaths) + '</b></td><td class="n"><b>' +
+      fmt1(totals.cum ? totals.deaths / totals.cum * 100 : null) + '%</b></td><td></td><td></td></tr></tfoot>';
+    $('#provTable').querySelectorAll('tbody tr').forEach(tr => tr.addEventListener('click', () => {
+      const p = tr.dataset.p; $('#fProv').value = S.filters.province === p ? '' : p; $('#fProv').dispatchEvent(new Event('change'));
+    }));
+  }
+
+  function renderOps(M) {
+    const latest = latestPerLocation(M.recs, M.to, CONFIG.STALE_DAYS);
+    const order = ['Province', 'Area Council', 'Facility'];
+    latest.sort((a, b) => (order.indexOf(a.geo_level) - order.indexOf(b.geo_level)) || locName(a).localeCompare(locName(b)));
+    const req = latest.filter(r => r.support_requested === 'Yes');
+    $('#supportBox').innerHTML = req.length ? '<div class="support"><h4>⚑ Open requests for support (' + req.length + ')</h4><ul>' +
+      req.sort((a, b) => String(a.support_urgency).localeCompare(String(b.support_urgency))).map(r => '<li><b>' + esc(locName(r)) + '</b> — ' + esc(r.support_urgency || '') +
+        ' · <i>' + esc(r.support_categories || '') + '</i><br>' + esc(r.support_details || '') + ' <span class="qa" style="color:var(--muted)">(' + esc(r.report_id) + ', ' + esc(fmtDay(r.report_date)) + ')</span></li>').join('') + '</ul></div>' : '';
+    const block = (t, v) => v ? '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>' : '';
+    $('#ops').innerHTML = latest.length ? latest.map(r => '<article class="op"><h4>' + esc(locName(r)) + ' ' + lvlTag(M, M.alertLevels.indexOf(r.alert_level)) + '</h4>' +
+      '<div class="meta">' + esc(r.organisation || '') + ' · ' + esc(r.overall_status || '') + ' · ' + esc(r.response_phase || '') + ' phase · reported ' + esc(fmtDay(r.report_date)) + ' · ' + esc(r.report_id || '') + '</div><dl style="margin:0">' +
+      block('Situation', r.narrative) + block('Actions (last 24–48 h)', r.actions) + block('Priorities (next 24–48 h)', r.priorities) +
+      block('Challenges', r.challenges) + block('Key public messages', r.key_messages) + '</dl></article>').join('')
+      : '<div class="empty">No operational updates in this period.</div>';
+  }
+
+  function renderResources(M) {
+    const res = M.meta.resources || [];
+    const latest = latestPerLocation(M.recs.filter(r => res.some(x => r[x.key])), M.to, CONFIG.STALE_DAYS)
+      .sort((a, b) => locName(a).localeCompare(locName(b)));
+    if (!latest.length || !res.length) { $('#resTable').innerHTML = '<tbody><tr><td class="empty">No resource status reported.</td></tr></tbody>'; return; }
+    $('#resTable').innerHTML = '<thead><tr><th>Location</th>' + res.map(x => '<th style="text-align:center">' + esc(x.label) + '</th>').join('') + '<th class="n">Beds occupied</th><th>Reported</th></tr></thead><tbody>' +
+      latest.map(r => '<tr><td><b>' + esc(locName(r)) + '</b></td>' + res.map(x => '<td class="rs rs-' + slug(r[x.key]) + '">' + esc(r[x.key] || '—') + '</td>').join('') +
+        '<td class="n">' + (num(r.beds_total) ? fmtN(r.beds_occupied) + ' / ' + fmtN(r.beds_total) : '–') + '</td><td>' + esc(fmtDay(r.report_date)) + '</td></tr>').join('') + '</tbody>';
+  }
+
+  function renderSubmissions(M) {
+    const rows = M.recs.filter(r => r.report_date >= M.from && r.report_date <= M.to)
+      .sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).slice(0, 40);
+    $('#subTable').innerHTML = '<thead><tr><th>Report ID</th><th>Submitted</th><th>Report date</th><th>Location</th><th>Level</th><th>Organisation</th><th class="n">New cases</th><th class="n">New deaths</th><th class="n">Tests</th><th>Counted</th><th>Data-quality flags</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(r => '<tr><td><code>' + esc(r.report_id) + '</code></td><td>' + esc(fmtTs(r.submitted_at)) + '</td><td>' + esc(fmtDay(r.report_date)) + '</td><td>' + esc(locName(r)) + '</td><td>' + esc(r.geo_level) +
+        '</td><td>' + esc(r.organisation) + '</td><td class="n">' + fmtN(num(r.new_confirmed)) + '</td><td class="n">' + fmtN(num(r.new_deaths)) + '</td><td class="n">' + fmtN(num(r.tests_today)) + '</td><td>' +
+        (r.count_in_totals ? '<span class="tag ok">Yes</span>' : '<span class="tag no">No</span>') + '</td><td class="qa">' + (r.qa_flags ? '⚠ ' + esc(r.qa_flags) : '') + '</td></tr>').join('')
+        : '<tr><td colspan="11" class="empty">No submissions in this period.</td></tr>') + '</tbody>';
+  }
+
+  /* =====================================================================
+     DEMO DATA — synthetic outbreak used when DATA_URL is blank
+     ===================================================================== */
+  function makeDemoData() {
+    let seed = 20261013;
+    const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const pois = l => { if (l <= 0) return 0; if (l > 30) return Math.max(0, Math.round(l + Math.sqrt(l) * gauss())); const L = Math.exp(-l); let k = 0, p = 1; do { k++; p *= rnd(); } while (p > L); return k - 1; };
+    const binom = (n, p) => { let k = 0; for (let i = 0; i < n; i++) if (rnd() < p) k++; return k; };
+    const pick = a => a[Math.floor(rnd() * a.length)];
+    const PW = 'Malampa – province-wide';
+    const ALERTS = ['L1 – Readiness', 'L2 – Partial activation', 'L3 – Full activation'];
+    const STATUSES = ['Green – stable', 'Amber – watch', 'Red – escalate'];
+    const AGE = [['0_4', '0–4', 5], ['5_14', '5–14', 19], ['15_24', '15–24', 22], ['25_34', '25–34', 18], ['35_44', '35–44', 13], ['45_54', '45–54', 10], ['55_64', '55–64', 7], ['65_74', '65–74', 4], ['75p', '75+', 2]];
+    const RES = ['Hospital beds', 'Isolation beds', 'PPE', 'Oxygen', 'Lab reagents & test kits', 'Medicines', 'Vaccines', 'Staff', 'Transport', 'Communications'];
+    const resKey = r => 'res_' + r.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    // Malampa area councils (2020 Census). One reporting facility each; facility names other than Norsup Hospital are DEMO placeholders.
+    const POP = [
+      { name: 'North West Malekula', code: 'NWM', pop: 5503, lat: -16.07, lng: 167.40, peak: 40, w: 12, a: 3.2, fac: 'Norsup Hospital', type: 'Hospital', beds: 30 },
+      { name: 'North East Malekula', code: 'NEM', pop: 6816, lat: -16.20, lng: 167.53, peak: 46, w: 12, a: 2.4, fac: 'North East Malekula HC (demo)', type: 'Health centre', beds: 6 },
+      { name: 'Central Malekula', code: 'CMK', pop: 6405, lat: -16.30, lng: 167.40, peak: 52, w: 11, a: 1.6, fac: 'Central Malekula HC (demo)', type: 'Health centre', beds: 6 },
+      { name: 'South West Malekula', code: 'SWM', pop: 3775, lat: -16.48, lng: 167.43, peak: 60, w: 10, a: 0.9, fac: 'South West Malekula HC (demo)', type: 'Health centre', beds: 4 },
+      { name: 'South Malekula', code: 'SMK', pop: 4485, lat: -16.55, lng: 167.58, peak: 56, w: 10, a: 1.0, fac: 'South Malekula HC (demo)', type: 'Health centre', beds: 4 },
+      { name: 'South East Malekula', code: 'SEM', pop: 5310, lat: -16.43, lng: 167.80, peak: 50, w: 11, a: 1.4, fac: 'South East Malekula HC (demo)', type: 'Health centre', beds: 6 },
+      { name: 'North Ambrym', code: 'NAM', pop: 3700, lat: -16.15, lng: 168.12, peak: 58, w: 10, a: 0.9, fac: 'North Ambrym HC (demo)', type: 'Health centre', beds: 4 },
+      { name: 'West Ambrym', code: 'WAM', pop: 2897, lat: -16.27, lng: 168.00, peak: 62, w: 9, a: 0.8, fac: 'West Ambrym HC (demo)', type: 'Health centre', beds: 4 },
+      { name: 'South East Ambrym', code: 'SEA', pop: 1931, lat: -16.32, lng: 168.25, peak: 64, w: 9, a: 0.4, fac: 'South East Ambrym dispensary (demo)', type: 'Dispensary', beds: 2 },
+      { name: 'Paama', code: 'PAA', pop: 1677, lat: -16.45, lng: 168.23, peak: 66, w: 8, a: 0.35, fac: 'Paama HC (demo)', type: 'Health centre', beds: 2 },
+    ];
+    const ACTIONS = ['Clean-up campaign and container removal in 4 villages.', 'Active case finding in schools; 2 new clusters identified.', 'Observation ward expanded by 6 beds.',
+      'Risk communication via radio and church networks.', 'Larval survey completed; Breteau index recorded.', 'NS1 samples shipped for PCR confirmation.', 'Clinician refresher on warning signs and fluid management.'];
+    const PRIORS = ['Complete source-reduction in affected area councils.', 'Strengthen zero-reporting from dispensaries.', 'Pre-position supplies before weather window closes.',
+      'Follow up all contacts listed in the past 21 days.', 'Expand outreach to schools and markets.'];
+    const CHALL = ['Sea transport delays to Ambrym and Paama.', 'Intermittent mobile network limits daily reporting.', 'Cold-chain capacity at limit in two health centres.', 'Staff fatigue; surge staff needed.', ''];
+    const MSGS = ['Fever for 2+ days? Visit the nearest health facility early — do not wait.', 'Empty, cover or throw away anything that holds water around your home.', 'Use mosquito nets and repellent, especially for children and pregnant women.'];
+    const ORGS = { pho: 'Malampa Provincial Health Office', hosp: 'Norsup Hospital', hc: 'Health centre', disp: 'Dispensary / aid post' };
+    const days = 75, end = todayKey(), start = addDays(end, -(days - 1));
+    const recs = []; let seq = 0;
+    const st = {};
+    POP.forEach(p => { st[p.name] = { cum: Math.round(p.a * 2), dth: 0, tests: Math.round(p.a * 30), rec: 0, hist: [], doses: Math.round(p.pop * .38), cov: 38 }; });
+    for (let t = 0; t < days; t++) {
+      const date = addDays(start, t);
+      const nat = { n: 0, d: 0, tests: 0, pos: 0, hosp: 0 };
+      POP.forEach(p => {
+        const s = st[p.name];
+        const lam = p.a * Math.exp(-Math.pow(t - p.peak, 2) / (2 * p.w * p.w)) + 0.15;
+        const n = pois(lam);
+        s.hist.push(n);
+        const missing = (p.code === 'PAA' && (rnd() < .2 || t === days - 1)) || (p.code === 'SEA' && rnd() < .12) || (p.code === 'SWM' && rnd() < .05);
+        if (missing) { s.cum += n; return; }
+        const deaths = p.type === 'Hospital' ? binom(n, .012) : 0;
+        s.cum += n; s.dth += deaths;
+        const active = s.hist.slice(-14).reduce((a, b) => a + b, 0);
+        s.rec = Math.max(0, s.cum - active - s.dth);
+        const tests = Math.round(n * (2.5 + rnd() * 2) + pois(p.type === 'Hospital' ? 4 : 1)); s.tests += tests;
+        const hosp = Math.min(p.beds, Math.round(active * (p.type === 'Hospital' ? .35 : .06) + (p.type === 'Hospital' ? rnd() * 2 : 0))), icu = p.type === 'Hospital' ? binom(hosp, .12) : 0;
+        const loc = binom(n, .86), imp = binom(n - loc, .5); let unk = n - loc - imp;
+        const r = {
+          report_id: '', submitted_at: new Date(fromKey(date).getTime() + (4 + rnd() * 3) * 3600e3).toISOString(),
+          report_date: date, report_time: '16:00', event_name: 'Dengue outbreak response', organisation: p.type === 'Hospital' ? ORGS.hosp : p.type === 'Dispensary' ? ORGS.disp : ORGS.hc,
+          area_council: p.name, geo_level: 'Facility', facility: p.fac, facility_type: p.type, location_key: 'facility|' + p.name.toLowerCase() + '|' + p.fac.toLowerCase(),
+          new_confirmed: n, cum_confirmed: s.cum, new_probable: pois(lam * .4), new_suspected: pois(lam * 1.3), new_deaths: deaths, cum_deaths: s.dth,
+          active, recovered_new: '', recovered_cum: s.rec, hosp_total: hosp, hosp_icu: icu, tests_today: tests, positives_today: n, tests_cum: s.tests,
+          positivity_pct: tests ? Math.round(n / tests * 1000) / 10 : '',
+          vacc_reported: 'No', vacc_doses_today: '', vacc_doses_cum: '', vacc_coverage_pct: '',
+          trans_local: loc, trans_imported: imp, trans_unknown: unk, onset_json: '', agesex_available: 'Yes', sex_unknown: 0,
+          beds_total: p.beds, beds_occupied: hosp,
+          count_in_totals: true, qa_flags: ''
+        };
+        AGE.forEach(a => { r['age_' + a[0] + '_m'] = 0; r['age_' + a[0] + '_f'] = 0; });
+        const totW = AGE.reduce((x, a) => x + a[2], 0);
+        for (let i = 0; i < n; i++) {
+          if (rnd() < .04) { r.sex_unknown++; continue; }
+          let u = rnd() * totW, j = 0; while (u > AGE[j][2]) { u -= AGE[j][2]; j++; }
+          r['age_' + AGE[j][0] + (rnd() < .52 ? '_m' : '_f')]++;
+        }
+        const on = {};
+        for (let i = 0; i < n; i++) { const k = addDays(date, -(1 + Math.floor(rnd() * 6))); on[k] = (on[k] || 0) + 1; }
+        r.onset_json = n ? JSON.stringify(on) : '';
+        const inc7 = s.hist.slice(-7).reduce((a, b) => a + b, 0) / p.pop * 1e5;
+        const li = inc7 >= 250 ? 2 : inc7 >= 60 ? 1 : 0;
+        r.alert_level = ALERTS[p.type === 'Hospital' ? Math.max(1, li) : li]; r.overall_status = STATUSES[li]; r.response_phase = li >= 1 ? 'Response' : 'Alert';
+        r.actions = pick(ACTIONS) + ' ' + pick(ACTIONS); r.priorities = pick(PRIORS); r.challenges = pick(CHALL);
+        r.narrative = n + ' new confirmed ' + (n === 1 ? 'case' : 'cases') + ' today in ' + p.name + '; ' + (inc7 > 25 ? 'transmission remains intense around ' + (p.code === 'NWM' ? 'Lakatoro and Norsup.' : 'coastal villages.') : 'transmission is sporadic and linked to known clusters.');
+        r.key_messages = pick(MSGS);
+        RES.forEach(x => {
+          const strain = Math.min(1, inc7 / 350);
+          const u = rnd() * .6 + strain * .6;
+          r[resKey(x)] = u > 1 ? 'Stock-out' : u > .8 ? 'Critical' : u > .5 ? 'Limited' : 'Adequate';
+        });
+        const sup = li >= 1 && rnd() < .3;
+        r.support_requested = sup ? 'Yes' : 'No';
+        if (sup) {
+          r.support_categories = pick(['Staff / surge capacity', 'Supplies / PPE, Logistics / transport', 'Supplies / PPE', 'Lab / testing']);
+          r.support_urgency = pick(['Immediate (within 24 h)', 'Within 48–72 h']);
+          r.support_details = pick(['Request 2 nurses from Norsup for 2 weeks to support fever clinic.', 'Need 50 NS1 rapid test kits and IV fluids on next flight to Norsup.',
+            'Boat charter required for vector-control team to Ambrym and Paama.', 'Additional mosquito nets (200) for admitted patients and households.']);
+        }
+        if (rnd() < .04 && n > 2) { r.trans_unknown = unk + 1; r.qa_flags = 'Transmission breakdown (' + (n + 1) + ') ≠ new cases (' + n + ')'; }
+        seq++; r.report_id = 'SR-' + date.replace(/-/g, '') + '-' + p.code + '-' + String(seq).padStart(4, '0');
+        recs.push(r);
+        nat.n += n; nat.d += deaths; nat.tests += tests; nat.pos += n; nat.hosp += hosp;
+      });
+      seq++;
+      recs.push({
+        report_id: 'SR-' + date.replace(/-/g, '') + '-MAL-' + String(seq).padStart(4, '0'), submitted_at: new Date(fromKey(date).getTime() + 8 * 3600e3).toISOString(),
+        report_date: date, event_name: 'Dengue outbreak response', organisation: ORGS.pho, area_council: PW, geo_level: 'Province', facility: '',
+        location_key: 'province|' + PW.toLowerCase() + '|', new_confirmed: nat.n, new_deaths: nat.d, tests_today: nat.tests, positives_today: nat.pos, hosp_total: nat.hosp,
+        alert_level: ALERTS[nat.n > 12 ? 2 : 1], overall_status: STATUSES[nat.n > 12 ? 2 : 1], response_phase: 'Response', support_requested: 'No',
+        actions: 'Malampa PHO and Norsup Hospital Dengue EOC daily coordination meeting held; vector-control teams tasked by area council.',
+        priorities: 'Consolidate facility SitReps; prioritise hotspot area councils for source reduction; request supplies via MoH.',
+        narrative: 'Province-wide consolidated update (counted only when no facility reports exist for the day).', key_messages: MSGS[1], count_in_totals: false, qa_flags: ''
+      });
+    }
+    const cols = Object.keys(recs.reduce((m, r) => Object.assign(m, r), {}));
+    return {
+      meta: {
+        generated: new Date().toISOString(), title: 'Malampa Province SitRep', province: 'Malampa', country: 'Vanuatu', event: 'Dengue outbreak response (DEMO)',
+        primaryLevel: 'Facility', alertLevels: ALERTS, statuses: STATUSES, geoLabel: 'Area council', provinceWide: PW, recordCount: recs.length,
+        ageBands: AGE.map(a => ({ key: a[0], label: a[1] })), resources: RES.map(r => ({ key: resKey(r), label: r }))
+      },
+      population: POP.map(p => ({ name: p.name, pop: p.pop, lat: p.lat, lng: p.lng })),
+      cols, rows: recs.map(r => cols.map(c => r[c] === undefined ? '' : r[c]))
+    };
+  }
+
+  /* =====================================================================
+     START
+     ===================================================================== */
+  const savedTheme = store.get('sitrep-theme');
+  document.documentElement.dataset.theme = savedTheme || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  bindFilters();
+  window.addEventListener('resize', () => { if (S.data) { clearTimeout(S._rs); S._rs = setTimeout(() => renderKPIs(compute()), 200); } });
+  load();
+})();
+</script>
+</body>
+</html>
